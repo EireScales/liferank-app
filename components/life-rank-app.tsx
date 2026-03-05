@@ -26,6 +26,7 @@ const QUEST_TEMPLATES: Record<Category, { xp: number; label: string }> = {
 };
 
 const MOMENTUM_STORAGE_KEY = "liferank-momentum";
+const EARLY_ACCESS_STORAGE_KEY = "liferank-early-access";
 
 function getTodayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -156,6 +157,11 @@ export default function LifeRankApp() {
     questsCompleted: 0,
     highestLevelReached: 1
   });
+  const [earlyAccessModalOpen, setEarlyAccessModalOpen] = useState(false);
+  const [feedbackModalOpen, setFeedbackModalOpen] = useState(false);
+  const [earlyAccessEmail, setEarlyAccessEmail] = useState("");
+  const [earlyAccessSuccess, setEarlyAccessSuccess] = useState(false);
+  const [feedbackText, setFeedbackText] = useState("");
 
   const currentQuestion = questions[step];
   const result = useMemo(() => calculateAssessment(answers), [answers]);
@@ -464,6 +470,52 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
     }
   };
 
+  const handleJoinWaitlist = (e: FormEvent) => {
+    e.preventDefault();
+    const email = earlyAccessEmail.trim();
+    if (!email) return;
+    try {
+      const payload = { email, joinedAt: new Date().toISOString() };
+      if (typeof window !== "undefined") {
+        const existing = window.localStorage.getItem(EARLY_ACCESS_STORAGE_KEY);
+        const list = existing ? (JSON.parse(existing) as { email: string; joinedAt: string }[]) : [];
+        list.push(payload);
+        window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify(list));
+      }
+      setEarlyAccessSuccess(true);
+      setTimeout(() => {
+        setEarlyAccessModalOpen(false);
+        setEarlyAccessSuccess(false);
+        setEarlyAccessEmail("");
+        setFeedbackModalOpen(true);
+      }, 1800);
+    } catch {
+      // ignore
+    }
+  };
+
+  const handleSendFeedback = (e: FormEvent) => {
+    e.preventDefault();
+    try {
+      if (typeof window !== "undefined") {
+        const raw = window.localStorage.getItem(EARLY_ACCESS_STORAGE_KEY);
+        const list: { email?: string; joinedAt?: string; feedback?: string; sentAt?: string }[] = raw ? JSON.parse(raw) : [];
+        const last = list[list.length - 1];
+        if (last && typeof last === "object") {
+          last.feedback = feedbackText.trim();
+          last.sentAt = new Date().toISOString();
+          window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify(list));
+        } else {
+          window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify([{ feedback: feedbackText.trim(), sentAt: new Date().toISOString() }]));
+        }
+      }
+      setFeedbackText("");
+      setFeedbackModalOpen(false);
+    } catch {
+      // ignore
+    }
+  };
+
   const onAskAI = async (event: FormEvent) => {
     event.preventDefault();
     if (!chatInput.trim()) return;
@@ -499,9 +551,16 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
                 Most people drift through life.
               </p>
               <p className="mt-1 text-base font-medium text-slate-200">Players build their character.</p>
-              <GameButton onClick={() => setStage("assessment")} className="mt-8">
-                Start Your Character
+              <GameButton onClick={() => setEarlyAccessModalOpen(true)} className="mt-8">
+                Early players shape the game
               </GameButton>
+              <button
+                type="button"
+                onClick={() => setStage("assessment")}
+                className="mt-3 w-full rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-medium text-slate-300 backdrop-blur-sm transition hover:bg-white/10 hover:text-white"
+              >
+                Start Your Character
+              </button>
             </GlassCard>
           </section>
         )}
@@ -1255,6 +1314,107 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
           </div>
         </section>
       )}
+
+        {/* Early Access Modal */}
+        {earlyAccessModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="early-access-title"
+          >
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => !earlyAccessSuccess && setEarlyAccessModalOpen(false)}
+              aria-hidden
+            />
+            <div className="relative w-full max-w-md rounded-[20px] border border-white/10 bg-gradient-to-b from-[#1a1535] to-[#0f0c29] p-6 shadow-glass shadow-[0_0_48px_rgba(124,58,237,0.2)] backdrop-blur-md animate-fade-in">
+              {earlyAccessSuccess ? (
+                <div className="text-center py-4">
+                  <h2 id="early-access-title" className="text-2xl font-bold text-white">You&apos;re in.</h2>
+                  <p className="mt-3 text-slate-300">We&apos;ll notify you when LifeRank opens.</p>
+                </div>
+              ) : (
+                <>
+                  <h2 id="early-access-title" className="text-xl font-bold text-white">Join Early Access</h2>
+                  <p className="mt-2 text-sm text-slate-400">
+                    LifeRank is launching soon. Early players will get priority access and help shape the game.
+                  </p>
+                  <form onSubmit={handleJoinWaitlist} className="mt-5 space-y-4">
+                    <div>
+                      <label htmlFor="early-access-email" className="sr-only">Email address</label>
+                      <input
+                        id="early-access-email"
+                        type="email"
+                        value={earlyAccessEmail}
+                        onChange={(e) => setEarlyAccessEmail(e.target.value)}
+                        placeholder="Enter your email"
+                        required
+                        className="w-full rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-200 placeholder:text-slate-500 outline-none transition focus:ring-2 focus:ring-[#A78BFA]/50"
+                      />
+                    </div>
+                    <button
+                      type="submit"
+                      className="w-full rounded-2xl bg-gradient-to-r from-[#7C3AED] via-[#EC4899] to-[#6366F1] px-4 py-3.5 text-base font-bold text-white shadow-[0_0_24px_rgba(124,58,237,0.4)] transition hover:opacity-95 hover:shadow-[0_0_32px_rgba(124,58,237,0.5)]"
+                    >
+                      Join the Waitlist
+                    </button>
+                  </form>
+                </>
+              )}
+            </div>
+          </div>
+        )}
+
+        {/* Feedback Modal */}
+        {feedbackModalOpen && (
+          <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="feedback-title"
+          >
+            <div
+              className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+              onClick={() => setFeedbackModalOpen(false)}
+              aria-hidden
+            />
+            <div className="relative w-full max-w-md rounded-[20px] border border-white/10 bg-gradient-to-b from-[#1a1535] to-[#0f0c29] p-6 shadow-glass shadow-[0_0_48px_rgba(124,58,237,0.2)] backdrop-blur-md animate-fade-in">
+              <h2 id="feedback-title" className="text-xl font-bold text-white">Help shape LifeRank</h2>
+              <p className="mt-2 text-sm text-slate-400">
+                What do you think about the concept so far?
+              </p>
+              <form onSubmit={handleSendFeedback} className="mt-5 space-y-4">
+                <div>
+                  <label htmlFor="feedback-input" className="sr-only">Your thoughts</label>
+                  <textarea
+                    id="feedback-input"
+                    value={feedbackText}
+                    onChange={(e) => setFeedbackText(e.target.value)}
+                    placeholder="Your thoughts, ideas, or suggestions..."
+                    rows={5}
+                    className="w-full resize-none rounded-xl border border-white/10 bg-white/5 px-4 py-3 text-slate-200 placeholder:text-slate-500 outline-none transition focus:ring-2 focus:ring-[#A78BFA]/50"
+                  />
+                </div>
+                <div className="flex gap-3">
+                  <button
+                    type="submit"
+                    className="flex-1 rounded-2xl bg-gradient-to-r from-[#7C3AED] via-[#EC4899] to-[#6366F1] px-4 py-3.5 text-base font-bold text-white shadow-[0_0_24px_rgba(124,58,237,0.4)] transition hover:opacity-95 hover:shadow-[0_0_32px_rgba(124,58,237,0.5)]"
+                  >
+                    Send Feedback
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFeedbackText(""); setFeedbackModalOpen(false); }}
+                    className="rounded-2xl border border-white/20 bg-white/5 px-4 py-3.5 text-sm font-medium text-slate-300 backdrop-blur-sm transition hover:bg-white/10 hover:text-white"
+                  >
+                    Skip
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        )}
     </main>
     </GameLayout>
   );

@@ -51,6 +51,10 @@ const config: Config = {
         shimmer: {
           "0%": { backgroundPosition: "200% 0" },
           "100%": { backgroundPosition: "-200% 0" }
+        },
+        "fade-in": {
+          "0%": { opacity: "0" },
+          "100%": { opacity: "1" }
         }
       },
       animation: {
@@ -58,7 +62,8 @@ const config: Config = {
         "slide-up": "slide-up 0.4s ease-out",
         "glow-pulse": "glow-pulse 2s ease-in-out infinite",
         "bar-fill": "bar-fill 0.8s ease-out forwards",
-        shimmer: "shimmer 3s ease-in-out infinite"
+        shimmer: "shimmer 3s ease-in-out infinite",
+        "fade-in": "fade-in 0.25s ease-out forwards"
       },
       backgroundSize: {
         shimmer: "200% 100%"
