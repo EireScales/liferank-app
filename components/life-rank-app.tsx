@@ -30,17 +30,18 @@ const EARLY_ACCESS_STORAGE_KEY = "liferank-early-access";
 const WAITLIST_WEBHOOK_URL =
   "https://script.google.com/macros/s/AKfycbyPyIthJysv4EyFkT1J4_YBsAhL6H-2v133aEvc1d5TGzRU9Af9Gd7ocEIBDTnUgejP/exec";
 
-async function submitWaitlist(email: string, feedback: string) {
-  try {
-    await fetch(WAITLIST_WEBHOOK_URL, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, feedback })
-    });
-  } catch (error) {
-    console.error("Waitlist submission failed:", error);
+  async function submitWaitlist(email: string, feedback: string) {
+    try {
+      await fetch(WAITLIST_WEBHOOK_URL, {
+        method: "POST",
+        mode: "no-cors",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, feedback })
+      });
+    } catch (error) {
+      console.error("Waitlist submission failed:", error);
+    }
   }
-}
 
 function getTodayISO() {
   return new Date().toISOString().slice(0, 10);
