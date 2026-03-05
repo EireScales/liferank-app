@@ -3,7 +3,7 @@
 import { FormEvent, useEffect, useMemo, useState } from "react";
 import { AssessmentResult, Category, calculateAssessment, questions } from "@/lib/questions";
 
-type Stage = "welcome" | "assessment" | "results" | "dashboard" | "profile" | "paywall";
+type Stage = "welcome" | "assessment" | "results" | "dashboard" | "profile";
 
 const ARCHETYPE_MAP: Record<Category, string> = {
   Career: "The Builder",
@@ -1095,12 +1095,35 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
           </Card>
 
           <Card>
-            <h3 className="text-lg font-bold text-white">Ready to Level Up?</h3>
-            <p className="mt-1 text-sm text-slate-400">
-              Small, consistent upgrades in your weakest categories will increase your LifeRank the fastest.
+            <h3 className="text-xl font-bold text-white">Your LifeRank Result</h3>
+            <div className="mt-4 flex flex-wrap items-baseline gap-x-4 gap-y-1">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">LifeRank</p>
+                <p className="text-3xl font-extrabold text-white" style={{ textShadow: "0 0 24px rgba(167, 139, 250, 0.5)" }}>{result.lifeScore}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Level</p>
+                <p className="text-lg font-bold text-[#A78BFA]">{result.level} — {result.levelLabel}</p>
+              </div>
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Potential</p>
+                <p className="text-lg font-bold text-white">{result.potentialScore}</p>
+              </div>
+            </div>
+            <p className="mt-3 text-sm text-slate-300">You are ahead of <span className="font-bold text-[#A78BFA]">{result.aheadPercent}%</span> of players.</p>
+            <p className="mt-4 text-sm text-slate-400">
+              LifeRank is launching soon. Early players will help shape the system and get priority access.
             </p>
-            <GameButton onClick={() => setStage("paywall")} className="mt-4">
-              Start My Upgrade Plan
+            <p className="mt-2 text-xs font-semibold uppercase tracking-wider text-slate-500">Features coming soon:</p>
+            <ul className="mt-1.5 space-y-0.5 text-sm text-slate-400">
+              <li>• AI Life Coach</li>
+              <li>• Daily Quests</li>
+              <li>• Progress Tracking</li>
+              <li>• Character Archetypes</li>
+              <li>• Global Leaderboards</li>
+            </ul>
+            <GameButton onClick={() => setEarlyAccessModalOpen(true)} className="mt-5">
+              Join Early Access
             </GameButton>
           </Card>
         </section>
@@ -1222,94 +1245,6 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
                 <li>2. Level 13 — Architect</li>
                 <li>3. Level 12 — Titan</li>
               </ul>
-            </div>
-          </div>
-        </section>
-      )}
-
-      {stage === "paywall" && (
-        <section
-          className="animate-rise -mx-4 min-h-screen px-4 pb-8 pt-6"
-          style={{
-            background: "linear-gradient(180deg, #0f0c29 0%, #302b63 50%, #24243e 100%)",
-            marginTop: "-1.5rem"
-          }}
-        >
-          <div className="mx-auto max-w-md space-y-6">
-            {/* Hero */}
-            <div className="text-center">
-              <h1 className="text-3xl font-extrabold uppercase tracking-tight text-white sm:text-4xl">
-                Level up your life
-              </h1>
-              <p className="mt-3 text-sm leading-relaxed text-slate-300 sm:text-base">
-                Your character is ready. Now unlock the system that helps you level up.
-              </p>
-              <div className="mt-4 flex justify-center gap-4">
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-cyan-300/90">LifeRank</p>
-                  <p className="text-xl font-bold text-white">{result.lifeScore}</p>
-                </div>
-                <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-2 backdrop-blur-sm">
-                  <p className="text-[10px] font-semibold uppercase tracking-widest text-violet-300/90">Potential</p>
-                  <p className="text-xl font-bold text-white">{result.potentialScore}</p>
-                </div>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-sm">
-              <div className="grid grid-cols-2 gap-3 sm:gap-4">
-                {[
-                  { icon: "⚡", label: "AI Life Coach" },
-                  { icon: "🎯", label: "Daily Quests" },
-                  { icon: "📈", label: "Progress Tracking" },
-                  { icon: "🏆", label: "Level Challenges" },
-                  { icon: "🧠", label: "Character Archetypes" }
-                ].map(({ icon, label }) => (
-                  <div
-                    key={label}
-                    className="flex items-center gap-3 rounded-xl border border-white/5 bg-white/5 py-3 px-3"
-                  >
-                    <span className="text-xl" aria-hidden>{icon}</span>
-                    <span className="text-sm font-medium text-slate-200">{label}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pricing */}
-            <div className="grid gap-3 sm:grid-cols-2">
-              <div className="rounded-2xl border border-white/15 bg-white/5 p-4 backdrop-blur-sm transition hover:border-violet-400/30">
-                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400">Monthly Plan</p>
-                <p className="mt-1 text-2xl font-bold text-white">$10</p>
-                <p className="text-xs text-slate-400">/ month</p>
-              </div>
-              <div className="relative rounded-2xl border-2 border-violet-400/50 bg-gradient-to-br from-violet-500/20 to-fuchsia-500/10 p-4 shadow-[0_0_24px_rgba(139,92,246,0.25)] backdrop-blur-sm transition hover:shadow-[0_0_32px_rgba(139,92,246,0.35)]">
-                <span className="absolute -top-2.5 left-4 rounded-full bg-violet-500 px-2.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-white shadow-[0_0_12px_rgba(139,92,246,0.6)]">
-                  Best Value
-                </span>
-                <p className="text-xs font-semibold uppercase tracking-wider text-violet-200">Yearly Plan</p>
-                <p className="mt-1 text-2xl font-bold text-white">$55</p>
-                <p className="text-xs text-slate-400">/ year</p>
-              </div>
-            </div>
-
-            {/* CTA */}
-            <div className="space-y-3 pt-2">
-              <button
-                type="button"
-                onClick={() => setStage("dashboard")}
-                className="w-full rounded-2xl bg-gradient-to-r from-violet-500 to-fuchsia-500 px-4 py-4 text-base font-bold text-white shadow-[0_0_28px_rgba(139,92,246,0.4)] transition hover:opacity-95 hover:shadow-[0_0_36px_rgba(139,92,246,0.5)] animate-glow-pulse"
-              >
-                Unlock My Character
-              </button>
-              <button
-                type="button"
-                onClick={() => setStage("dashboard")}
-                className="w-full rounded-2xl border border-white/20 bg-white/5 py-3 text-sm font-medium text-slate-300 backdrop-blur-sm transition hover:bg-white/10 hover:text-white"
-              >
-                Continue with Free Version
-              </button>
             </div>
           </div>
         </section>
