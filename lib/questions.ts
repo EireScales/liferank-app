@@ -84,11 +84,35 @@ export const questions: Question[] = [
   ] }
 ];
 
+type LifeLevel = {
+  level: number;
+  label: string;
+  min: number;
+  max: number;
+};
+
+const lifeLevels: LifeLevel[] = [
+  { level: 1, label: "Beginner", min: 0, max: 20 },
+  { level: 2, label: "Explorer", min: 20, max: 40 },
+  { level: 3, label: "Builder", min: 40, max: 55 },
+  { level: 4, label: "Strategist", min: 55, max: 70 },
+  { level: 5, label: "Optimizer", min: 70, max: 85 },
+  { level: 6, label: "Elite", min: 85, max: 100 }
+];
+
 export type AssessmentResult = {
   categories: Record<Category, number>;
   lifeScore: number;
   aheadPercent: number;
   opportunities: { category: Category; potential: number }[];
+  potentialScore: number;
+  operatingPercent: number;
+  level: number;
+  levelLabel: string;
+  nextLevelScore: number;
+  pointsToNextLevel: number;
+  levelMinScore: number;
+  levelMaxScore: number;
 };
 
 const categoryWeights: Record<Category, number> = {
@@ -132,10 +156,55 @@ export function calculateAssessment(answers: Record<string, number>): Assessment
 
   const aheadPercent = Math.max(8, Math.min(96, Math.round(lifeScore * 0.8)));
 
+  const currentLevelConfig =
+    lifeLevels.find((lvl) => lifeScore >= lvl.min && lifeScore < lvl.max) ?? lifeLevels[lifeLevels.length - 1];
+
+  const nextLevelConfig =
+    lifeLevels[lifeLevels.findIndex((lvl) => lvl.level === currentLevelConfig.level) + 1] ?? currentLevelConfig;
+
+  const nextLevelScore =
+    nextLevelConfig.level === currentLevelConfig.level ? currentLevelConfig.max : nextLevelConfig.min;
+  const pointsToNextLevel = Math.max(0, nextLevelScore - lifeScore);
+
+  const realisticCategoryCeiling = 95;
+
+  const realisticCategories = (Object.entries(categories) as [Category, number][]).reduce(
+    (acc, [category, value]) => {
+      const boosted = value + (realisticCategoryCeiling - value) * 0.7;
+      acc[category] = Math.round(Math.min(100, Math.max(0, boosted)));
+      return acc;
+    },
+    {} as Record<Category, number>
+  );
+
+  const potentialScore = Math.round(
+    realisticCategories.Career * categoryWeights.Career +
+      realisticCategories.Money * categoryWeights.Money +
+      realisticCategories.Health * categoryWeights.Health +
+      realisticCategories.Social * categoryWeights.Social +
+      realisticCategories.Growth * categoryWeights.Growth
+  );
+
+  const safePotential = potentialScore > 0 ? potentialScore : Math.max(lifeScore, 1);
+  const operatingPercent = Math.round(Math.min(120, Math.max(0, (lifeScore / safePotential) * 100)));
+
   const opportunities = (Object.entries(categories) as [Category, number][])
     .map(([category, value]) => ({ category, potential: Math.max(0, 100 - value) }))
     .sort((a, b) => b.potential - a.potential)
     .slice(0, 3);
 
-  return { categories, lifeScore, aheadPercent, opportunities };
+  return {
+    categories,
+    lifeScore,
+    aheadPercent,
+    opportunities,
+    potentialScore,
+    operatingPercent,
+    level: currentLevelConfig.level,
+    levelLabel: currentLevelConfig.label,
+    nextLevelScore,
+    pointsToNextLevel,
+    levelMinScore: currentLevelConfig.min,
+    levelMaxScore: currentLevelConfig.max
+  };
 }
