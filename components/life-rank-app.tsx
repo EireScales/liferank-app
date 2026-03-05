@@ -27,6 +27,20 @@ const QUEST_TEMPLATES: Record<Category, { xp: number; label: string }> = {
 
 const MOMENTUM_STORAGE_KEY = "liferank-momentum";
 const EARLY_ACCESS_STORAGE_KEY = "liferank-early-access";
+const WAITLIST_WEBHOOK_URL =
+  "https://script.google.com/macros/s/AKfycbyPyIthJysv4EyFkT1J4_YBsAhL6H-2v133aEvc1d5TGzRU9Af9Gd7ocEIBDTnUgejP/exec";
+
+async function submitWaitlist(email: string, feedback: string) {
+  try {
+    await fetch(WAITLIST_WEBHOOK_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email, feedback })
+    });
+  } catch (error) {
+    console.error("Waitlist submission failed:", error);
+  }
+}
 
 function getTodayISO() {
   return new Date().toISOString().slice(0, 10);
@@ -470,11 +484,12 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
     }
   };
 
-  const handleJoinWaitlist = (e: FormEvent) => {
+  const handleJoinWaitlist = async (e: FormEvent) => {
     e.preventDefault();
     const email = earlyAccessEmail.trim();
     if (!email) return;
     try {
+      await submitWaitlist(email, "");
       const payload = { email, joinedAt: new Date().toISOString() };
       if (typeof window !== "undefined") {
         const existing = window.localStorage.getItem(EARLY_ACCESS_STORAGE_KEY);
@@ -490,29 +505,41 @@ Biggest Opportunity: ${categoryOrder.reduce((worst, category) =>
         setFeedbackModalOpen(true);
       }, 1800);
     } catch {
-      // ignore
+      // still show success so UX isn't blocked by network errors
+      setEarlyAccessSuccess(true);
+      setTimeout(() => {
+        setEarlyAccessModalOpen(false);
+        setEarlyAccessSuccess(false);
+        setEarlyAccessEmail("");
+        setFeedbackModalOpen(true);
+      }, 1800);
     }
   };
 
-  const handleSendFeedback = (e: FormEvent) => {
+  const handleSendFeedback = async (e: FormEvent) => {
     e.preventDefault();
+    const feedback = feedbackText.trim();
     try {
       if (typeof window !== "undefined") {
         const raw = window.localStorage.getItem(EARLY_ACCESS_STORAGE_KEY);
         const list: { email?: string; joinedAt?: string; feedback?: string; sentAt?: string }[] = raw ? JSON.parse(raw) : [];
         const last = list[list.length - 1];
+        const email = last && typeof last === "object" && last.email ? last.email : "";
+        await submitWaitlist(email, feedback);
         if (last && typeof last === "object") {
-          last.feedback = feedbackText.trim();
+          last.feedback = feedback;
           last.sentAt = new Date().toISOString();
           window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify(list));
         } else {
-          window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify([{ feedback: feedbackText.trim(), sentAt: new Date().toISOString() }]));
+          window.localStorage.setItem(EARLY_ACCESS_STORAGE_KEY, JSON.stringify([{ feedback, sentAt: new Date().toISOString() }]));
         }
       }
       setFeedbackText("");
       setFeedbackModalOpen(false);
     } catch {
-      // ignore
+      // still close modal and clear; feedback may be lost but UX continues
+      setFeedbackText("");
+      setFeedbackModalOpen(false);
     }
   };
 
